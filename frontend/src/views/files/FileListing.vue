@@ -58,6 +58,7 @@
           <action
             v-if="headerButtons.delete"
             id="delete-button"
+            class="delete-red"
             icon="delete"
             :label="t('buttons.delete')"
             show="delete"
@@ -140,6 +141,7 @@
       />
       <action
         v-if="headerButtons.delete"
+        class="delete-red"
         icon="delete"
         :label="t('buttons.delete')"
         show="delete"
@@ -326,6 +328,7 @@
           <action
             v-if="headerButtons.delete"
             id="delete-button"
+            class="delete-red"
             icon="delete"
             :label="t('buttons.delete')"
             show="delete"
@@ -1219,5 +1222,10 @@ const handleEmptyAreaClick = (e: MouseEvent) => {
 
 .file-selection-margin-bottom {
   margin-bottom: 3.5rem;
+}
+
+/* Иконка мусорного ведра у кнопки Delete - приглушённый тёмно-красный */
+:deep(.delete-red .material-icons) {
+  color: #b23b3b;
 }
 </style>
