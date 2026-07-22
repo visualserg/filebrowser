@@ -38,7 +38,11 @@
       <p v-else class="size" :data-order="humanSize()">{{ humanSize() }}</p>
 
       <p class="modified">
-        <time :datetime="modified">{{ humanTime() }}</time>
+        <time
+          :datetime="modified"
+          :class="{ 'recent-badge': isRecentlyModified }"
+          >{{ humanTime() }}</time
+        >
       </p>
     </div>
   </div>
@@ -56,6 +60,7 @@ import { files as api } from "@/api";
 import * as upload from "@/utils/upload";
 import { computed, inject, ref } from "vue";
 import { useRouter } from "vue-router";
+import { isRecentlyModified as checkRecent } from "@/utils/recent";
 
 const touches = ref<number>(0);
 
@@ -129,6 +134,13 @@ const humanTime = () => {
   }
   return dayjs(props.modified).fromNow();
 };
+
+// Подсвечиваем время бейджем ~10с от первого показа недавно изменённого файла.
+// Завязано на реактивные часы (тик раз в секунду) внутри checkRecent, поэтому
+// пересчитывается по ходу времени и бейдж снимается с точностью до ~1 секунды.
+const isRecentlyModified = computed(() =>
+  checkRecent(props.url, props.modified)
+);
 
 const dragStart = () => {
   if (fileStore.selectedCount === 0) {
@@ -409,3 +421,19 @@ const handleTouchMove = (event: TouchEvent) => {
   }
 };
 </script>
+
+<style scoped>
+/* Подсветка времени для файла, изменённого < 10 секунд назад.
+   Отступы только сверху/снизу; по бокам паддинга нет, чтобы ширина
+   колонки не менялась и вёрстка не «плыла». */
+.recent-badge {
+  background-color: #b2f2bb;
+  color: #2b8a3e;
+  border-radius: 4px;
+  padding-top: 0.15em;
+  padding-bottom: 0.15em;
+  padding-left: 0;
+  padding-right: 0;
+  font-weight: 500;
+}
+</style>
