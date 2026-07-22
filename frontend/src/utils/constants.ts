@@ -6,7 +6,8 @@ const staticURL: string = window.FileBrowser.StaticURL;
 const recaptcha: string = window.FileBrowser.ReCaptcha;
 const recaptchaKey: string = window.FileBrowser.ReCaptchaKey;
 const signup: boolean = window.FileBrowser.Signup;
-const version: string = window.FileBrowser.Version;
+// кастомный билд: помечаем версию суффиксом, чтобы в сайдбаре было видно (2.63.15.custom)
+const version: string = window.FileBrowser.Version + ".custom";
 const logoURL = `${staticURL}/img/logo.svg`;
 const noAuth: boolean = window.FileBrowser.NoAuth;
 const authMethod = window.FileBrowser.AuthMethod;
