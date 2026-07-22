@@ -304,6 +304,12 @@
             show="rename"
           />
           <action
+            v-if="headerButtons.renameToTime"
+            icon="schedule"
+            :label="t('buttons.renameToTime')"
+            @action="renameSelectedToTime"
+          />
+          <action
             v-if="headerButtons.copy"
             id="copy-button"
             icon="content_copy"
@@ -400,6 +406,7 @@ import { useRoute, onBeforeRouteUpdate } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 import { removePrefix } from "@/api/utils";
+import url from "@/utils/url";
 
 const showLimit = ref<number>(50);
 const columnWidth = ref<number>(280);
@@ -524,6 +531,10 @@ const headerButtons = computed(() => {
       onlySelected !== null &&
       !onlySelected.isDir &&
       authStore.user?.perm.download,
+    renameToTime:
+      onlySelected !== null &&
+      !onlySelected.isDir &&
+      authStore.user?.perm.rename,
   };
 });
 
@@ -1026,6 +1037,40 @@ const openSelectedInTab = () => {
   const file = fileStore.req.items[fileStore.selected[0]];
   if (file.isDir) return;
   api.openInNewTab(file);
+};
+
+// Переименовать выбранный файл в текущее время ЧЧММ, сохранив расширение
+// (например 0901.pdf). Работает напрямую, без промпта.
+const renameSelectedToTime = async () => {
+  if (fileStore.req === null || fileStore.selectedCount !== 1) return;
+  const file = fileStore.req.items[fileStore.selected[0]];
+  if (file.isDir) return;
+
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+
+  // Сохраняем расширение исходного файла (точка в начале = скрытый файл, не расширение).
+  const dot = file.name.lastIndexOf(".");
+  const ext = dot > 0 ? file.name.slice(dot) : "";
+  const newName = `${hh}${mm}${ext}`;
+  if (newName === file.name) {
+    hideContextMenu();
+    return;
+  }
+
+  const newLink =
+    url.removeLastDir(file.url) + "/" + encodeURIComponent(newName);
+
+  try {
+    await api.move([{ from: file.url, to: newLink }]);
+    fileStore.preselect = removePrefix(newLink);
+    fileStore.reload = true;
+  } catch (e) {
+    if (e instanceof Error) $showError(e);
+  }
+
+  hideContextMenu();
 };
 
 const download = () => {

@@ -47,6 +47,7 @@
     "openDirect": "View raw",
     "openInTab": "Open in new tab",
     "todayDate": "Today's date",
+    "renameToTime": "Rename to current time",
     "autoRefresh": "Time until the list auto-refreshes",
     "discardChanges": "Discard",
     "stopSearch": "Stop searching",
