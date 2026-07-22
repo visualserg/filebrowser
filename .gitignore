@@ -40,3 +40,7 @@ Dockerfile.dev
 
 filebrowser-darwin
 filebrowser-linux-amd64
+
+# локальный тулинг/доки с инфра-деталями — не для публичного форка
+justfile
+CLAUDE.md
