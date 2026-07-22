@@ -338,7 +338,6 @@
             icon="file_download"
             :label="t('buttons.download')"
             @action="download"
-            :counter="fileStore.selectedCount"
           />
           <action icon="info" :label="t('buttons.info')" show="info" />
         </context-menu>
