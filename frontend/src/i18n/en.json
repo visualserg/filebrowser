@@ -45,6 +45,7 @@
     "upload": "Upload",
     "openFile": "Open file",
     "openDirect": "View raw",
+    "openInTab": "Open in new tab",
     "discardChanges": "Discard",
     "stopSearch": "Stop searching",
     "saveChanges": "Save changes",

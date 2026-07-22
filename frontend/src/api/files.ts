@@ -216,6 +216,18 @@ export function getDownloadURL(file: ResourceItem, inline: any) {
   return createURL("api/raw" + file.path, params);
 }
 
+export function openInNewTab(file: ResourceItem) {
+  const authStore = useAuthStore();
+  // Backend reads auth from X-Auth header or `auth` cookie (GET only).
+  // window.open creates a new tab that won't carry our header, so we set
+  // the cookie just-in-time so the new tab can authenticate against /api/raw.
+  const cookiePath = baseURL && baseURL !== "/" ? baseURL : "/";
+  // Mark Secure on HTTPS so the JWT cookie is never sent over plain HTTP.
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `auth=${encodeURIComponent(authStore.jwt)}; path=${cookiePath}; SameSite=Strict; Max-Age=60${secure}`;
+  window.open(getDownloadURL(file, true), "_blank", "noopener");
+}
+
 export function getPreviewURL(file: ResourceItem, size: string) {
   const params = {
     inline: "true",

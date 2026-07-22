@@ -13,6 +13,12 @@
       <template #actions>
         <template v-if="!isMobile">
           <action
+            v-if="headerButtons.openInTab"
+            icon="open_in_new"
+            :label="t('buttons.openInTab')"
+            @action="openSelectedInTab"
+          />
+          <action
             v-if="headerButtons.share"
             icon="share"
             :label="t('buttons.share')"
@@ -91,6 +97,12 @@
       <span v-if="fileStore.selectedCount > 0">
         {{ t("prompts.filesSelected", fileStore.selectedCount) }}
       </span>
+      <action
+        v-if="headerButtons.openInTab"
+        icon="open_in_new"
+        :label="t('buttons.openInTab')"
+        @action="openSelectedInTab"
+      />
       <action
         v-if="headerButtons.share"
         icon="share"
@@ -262,6 +274,12 @@
           :pos="contextMenuPos"
           @hide="hideContextMenu"
         >
+          <action
+            v-if="headerButtons.openInTab"
+            icon="open_in_new"
+            :label="t('buttons.openInTab')"
+            @action="openSelectedInTab"
+          />
           <action
             v-if="headerButtons.share"
             icon="share"
@@ -475,6 +493,10 @@ const viewIcon = computed(() => {
 });
 
 const headerButtons = computed(() => {
+  const onlySelected =
+    fileStore.selectedCount === 1 && fileStore.req
+      ? fileStore.req.items[fileStore.selected[0]]
+      : null;
   return {
     upload: authStore.user?.perm.create,
     download: authStore.user?.perm.download,
@@ -487,6 +509,10 @@ const headerButtons = computed(() => {
       authStore.user?.perm.download,
     move: fileStore.selectedCount > 0 && authStore.user?.perm.rename,
     copy: fileStore.selectedCount > 0 && authStore.user?.perm.create,
+    openInTab:
+      onlySelected !== null &&
+      !onlySelected.isDir &&
+      authStore.user?.perm.download,
   };
 });
 
@@ -983,6 +1009,13 @@ const windowsResize = throttle(() => {
   // Fill but not fit the window
   fillWindow();
 }, 100);
+
+const openSelectedInTab = () => {
+  if (fileStore.req === null || fileStore.selectedCount !== 1) return;
+  const file = fileStore.req.items[fileStore.selected[0]];
+  if (file.isDir) return;
+  api.openInNewTab(file);
+};
 
 const download = () => {
   if (fileStore.req === null) return;
