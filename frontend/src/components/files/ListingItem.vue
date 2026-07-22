@@ -51,16 +51,15 @@
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
 import { useFileStore } from "@/stores/file";
-import { useLayoutStore } from "@/stores/layout";
 
 import { enableThumbs } from "@/utils/constants";
 import { filesize } from "@/utils";
 import dayjs from "dayjs";
 import { files as api } from "@/api";
-import * as upload from "@/utils/upload";
-import { computed, inject, ref } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { isRecentlyModified as checkRecent } from "@/utils/recent";
+import { useMoveSelected } from "@/composables/useMoveSelected";
 
 const touches = ref<number>(0);
 
@@ -70,7 +69,6 @@ const longPressDelay = ref<number>(500);
 const startPosition = ref<{ x: number; y: number } | null>(null);
 const moveThreshold = ref<number>(10);
 
-const $showError = inject<IToastError>("$showError")!;
 const router = useRouter();
 
 const props = defineProps<{
@@ -87,7 +85,7 @@ const props = defineProps<{
 
 const authStore = useAuthStore();
 const fileStore = useFileStore();
-const layoutStore = useLayoutStore();
+const { moveSelectedTo } = useMoveSelected();
 
 const singleClick = computed(
   () => !props.readOnly && authStore.user?.singleClick
@@ -170,85 +168,15 @@ const dragOver = (event: Event) => {
   }
 };
 
-const drop = async (event: Event) => {
+const drop = (event: DragEvent) => {
   if (!canDrop.value) return;
   event.preventDefault();
 
   if (fileStore.selectedCount === 0) return;
 
-  let el = event.target as HTMLElement | null;
-  for (let i = 0; i < 5; i++) {
-    if (el !== null && !el.classList.contains("item")) {
-      el = el.parentElement;
-    }
-  }
-
-  const items: any[] = [];
-
-  for (const i of fileStore.selected) {
-    if (fileStore.req) {
-      items.push({
-        from: fileStore.req?.items[i].url,
-        to: props.url + encodeURIComponent(fileStore.req?.items[i].name),
-        name: fileStore.req?.items[i].name,
-        size: fileStore.req?.items[i].size,
-        isDir: fileStore.req?.items[i].isDir,
-        modified: fileStore.req?.items[i].modified,
-        overwrite: false,
-        rename: false,
-      });
-    }
-  }
-
-  // Get url from ListingItem instance
-  if (el === null) {
-    return;
-  }
-  const path = el.__vue__.url;
-
-  const action = (overwrite?: boolean, rename?: boolean) => {
-    const action =
-      (event as KeyboardEvent).ctrlKey || (event as KeyboardEvent).metaKey
-        ? api.copy
-        : api.move;
-    action(items, overwrite, rename)
-      .then(() => {
-        fileStore.reload = true;
-      })
-      .catch($showError);
-  };
-
-  const conflict = await upload.checkConflict(items, path, true);
-
-  if (conflict.length > 0) {
-    layoutStore.showHover({
-      prompt: "resolve-conflict",
-      props: {
-        conflict: conflict,
-      },
-      confirm: (event: Event, result: Array<ConflictingResource>) => {
-        event.preventDefault();
-        layoutStore.closeHovers();
-        for (let i = result.length - 1; i >= 0; i--) {
-          const item = result[i];
-          if (item.checked.length == 2) {
-            items[item.index].rename = true;
-          } else if (item.checked.length == 1 && item.checked[0] == "origin") {
-            items[item.index].overwrite = true;
-          } else {
-            items.splice(item.index, 1);
-          }
-        }
-        if (items.length > 0) {
-          action();
-        }
-      },
-    });
-
-    return;
-  }
-
-  action(false, false);
+  // props.url - url этой папки-цели; перенос (или копия при Ctrl/Cmd) выбранного.
+  // Общая логика перемещения с разрешением конфликтов - в useMoveSelected.
+  moveSelectedTo(props.url, event.ctrlKey || event.metaKey);
 };
 
 const itemClick = (event: Event | KeyboardEvent) => {
