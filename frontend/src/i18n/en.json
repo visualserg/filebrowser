@@ -46,6 +46,7 @@
     "openFile": "Open file",
     "openDirect": "View raw",
     "openInTab": "Open in new tab",
+    "todayDate": "Today's date",
     "autoRefresh": "Time until the list auto-refreshes",
     "discardChanges": "Discard",
     "stopSearch": "Stop searching",

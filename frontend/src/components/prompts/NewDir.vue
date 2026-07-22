@@ -6,14 +6,26 @@
 
     <div class="card-content">
       <p>{{ t("prompts.newDirMessage") }}</p>
-      <input
-        id="focus-prompt"
-        class="input input--block"
-        type="text"
-        @keyup.enter="submit"
-        v-model.trim="name"
-        tabindex="1"
-      />
+      <div class="new-dir-input">
+        <input
+          id="focus-prompt"
+          class="input input--block"
+          type="text"
+          @keyup.enter="submit"
+          v-model.trim="name"
+          tabindex="1"
+        />
+        <button
+          class="button button--flat new-dir-input__today"
+          type="button"
+          @click="fillToday"
+          :aria-label="t('buttons.todayDate')"
+          :title="t('buttons.todayDate')"
+          tabindex="4"
+        >
+          <i class="material-icons">today</i>
+        </button>
+      </div>
       <CreateFilePath :name="name" :is-dir="true" :path="base" />
     </div>
 
@@ -66,6 +78,15 @@ const { t } = useI18n();
 
 const name = ref<string>("");
 
+// Подставляет сегодняшнюю дату в формате ГГГГММДД (8 символов, без разделителей).
+const fillToday = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  name.value = `${y}${m}${d}`;
+};
+
 const submit = async (event: Event) => {
   event.preventDefault();
   if (name.value === "") return;
@@ -103,3 +124,28 @@ const submit = async (event: Event) => {
   layoutStore.closeHovers();
 };
 </script>
+
+<style scoped>
+.new-dir-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.new-dir-input .input {
+  flex: 1 1 auto;
+}
+
+.new-dir-input__today {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.35em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.new-dir-input__today i {
+  font-size: 1.25em;
+}
+</style>
