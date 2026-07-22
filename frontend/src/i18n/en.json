@@ -46,6 +46,7 @@
     "openFile": "Open file",
     "openDirect": "View raw",
     "openInTab": "Open in new tab",
+    "autoRefresh": "Time until the list auto-refreshes",
     "discardChanges": "Discard",
     "stopSearch": "Stop searching",
     "saveChanges": "Save changes",

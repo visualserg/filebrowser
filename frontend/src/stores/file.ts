@@ -10,6 +10,9 @@ export const useFileStore = defineStore("file", {
     multiple: boolean;
     isFiles: boolean;
     preselect: string | null;
+    contextMenuOpen: boolean;
+    autoRefreshIntervalMs: number;
+    refreshCycle: number;
   } => ({
     req: null,
     oldReq: null,
@@ -18,6 +21,12 @@ export const useFileStore = defineStore("file", {
     multiple: false,
     isFiles: false,
     preselect: null,
+    contextMenuOpen: false,
+    // единственный источник интервала авто-обновления: питает и JS-таймер (Files.vue),
+    // и длительность CSS-анимации кольца-«часов» (FileListing.vue, инлайн animation-duration)
+    autoRefreshIntervalMs: 5000,
+    // счётчик циклов: меняется в начале каждого отсчёта → через :key перезапускает анимацию кольца
+    refreshCycle: 0,
   }),
   getters: {
     selectedCount: (state) => state.selected.length,

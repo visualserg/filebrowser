@@ -10,6 +10,17 @@
         @action="openSearch()"
       />
 
+      <!-- индикатор-«часы»: обводка идёт по кругу; замыкается (12 часов) = момент авто-обновления.
+           длительность анимации = fileStore.autoRefreshIntervalMs (единый источник интервала);
+           :key=refreshCycle перезапускает анимацию синхронно с таймером в Files.vue -->
+      <div
+        class="refresh-ring"
+        :key="fileStore.refreshCycle"
+        :style="{ animationDuration: fileStore.autoRefreshIntervalMs + 'ms' }"
+        :title="t('buttons.autoRefresh')"
+        aria-hidden="true"
+      ></div>
+
       <template #actions>
         <template v-if="!isMobile">
           <action
@@ -1135,6 +1146,7 @@ const revealPreviousItem = () => {
 const showContextMenu = (event: MouseEvent) => {
   event.preventDefault();
   isContextMenuVisible.value = true;
+  fileStore.contextMenuOpen = true; // пауза автообновления, пока меню открыто
   contextMenuPos.value = {
     x: event.clientX + 8,
     y: event.clientY + Math.floor(window.scrollY),
@@ -1143,6 +1155,7 @@ const showContextMenu = (event: MouseEvent) => {
 
 const hideContextMenu = () => {
   isContextMenuVisible.value = false;
+  fileStore.contextMenuOpen = false;
 };
 
 const handleEmptyAreaClick = (e: MouseEvent) => {

@@ -277,3 +277,50 @@ html[dir="rtl"] #search .boxes h3 {
   color: #fff !important;
   font-size: 3.5em;
 }
+
+/* --- Индикатор-«часы» до авто-обновления списка (кастом) --- */
+/* @property делает --fb-refresh-progress анимируемым — без этого conic-gradient не анимируется */
+@property --fb-refresh-progress {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+.refresh-ring {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  align-self: center;
+  margin: 0 0.4em;
+  border-radius: 50%;
+  /* обводка нарастает по часовой стрелке от 12 часов (дефолт conic-gradient) */
+  background: conic-gradient(
+    var(--blue) var(--fb-refresh-progress),
+    rgba(127, 127, 127, 0.25) 0
+  );
+  /* вырезаем центр → остаётся только кольцо (обводка) */
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2.5px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2.5px)
+  );
+  animation-name: fb-refresh-countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  animation-iteration-count: 1;
+  /* animation-duration задаётся инлайн из fileStore.autoRefreshIntervalMs (единый источник) */
+}
+
+@keyframes fb-refresh-countdown {
+  from {
+    --fb-refresh-progress: 0%;
+  }
+  to {
+    --fb-refresh-progress: 100%;
+  }
+}

@@ -85,6 +85,63 @@ const currentView = computed(() => {
   }
 });
 
+// --- Автообновление списка + индикатор-«часы» (кастом) ---
+// Интервал живёт в fileStore.autoRefreshIntervalMs — единственный источник правды:
+// им же (через инлайн animation-duration) управляется CSS-анимация кольца в FileListing.
+// Модель: setTimeout, который перезапланируется после каждого обновления/навигации.
+// В начале каждого отсчёта дёргаем fileStore.refreshCycle → кольцо (через :key)
+// перезапускает анимацию, поэтому «12 часов» кольца совпадает с моментом обновления.
+// silentRefresh, в отличие от fetchData(), не трогает loading/спиннер и не сбрасывает
+// выделение: updateRequest() сам восстанавливает selection по url элементов.
+let autoRefreshTimer: number | undefined;
+let silentController = new AbortController();
+
+const currentUrl = () => {
+  let url = route.path;
+  if (url === "") url = "/";
+  if (url[0] !== "/") url = "/" + url;
+  return url;
+};
+
+const silentRefresh = async () => {
+  // только для листинга папки, активной вкладки, без открытых модалок/меню
+  if (
+    !fileStore.req?.isDir ||
+    document.hidden ||
+    layoutStore.loading ||
+    layoutStore.prompts.length > 0 ||
+    fileStore.contextMenuOpen
+  ) {
+    return;
+  }
+
+  const url = currentUrl();
+  silentController = new AbortController();
+  try {
+    const res = await api.fetch(url, silentController.signal);
+    // отбрасываем ответ, если за время запроса ушли в другую папку
+    if (currentUrl() === url) {
+      fileStore.updateRequest(res);
+    }
+  } catch {
+    // тихо игнорируем — ошибки обработает обычный fetchData при навигации
+  }
+};
+
+const runAutoRefresh = async () => {
+  await silentRefresh();
+  scheduleAutoRefresh();
+};
+
+const scheduleAutoRefresh = () => {
+  if (autoRefreshTimer) window.clearTimeout(autoRefreshTimer);
+  fileStore.refreshCycle++; // рестарт анимации кольца (через :key в FileListing)
+  autoRefreshTimer = window.setTimeout(
+    runAutoRefresh,
+    fileStore.autoRefreshIntervalMs
+  );
+};
+
 // Define hooks
 onMounted(() => {
   fetchData();
@@ -103,6 +160,8 @@ onUnmounted(() => {
   }
   fileStore.updateRequest(null);
   fetchDataController.abort();
+  if (autoRefreshTimer) window.clearTimeout(autoRefreshTimer);
+  silentController.abort();
 });
 
 watch(route, () => {
@@ -165,6 +224,9 @@ const fetchData = async () => {
 
     // Selects the post-reload target item or the previously visited child folder
     applyPreSelection();
+
+    // перезапустить отсчёт до следующего авто-обновления (и синхронизировать кольцо)
+    scheduleAutoRefresh();
   } catch (err) {
     if (err instanceof StatusError && err.is_canceled) {
       return;
