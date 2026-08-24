@@ -14,6 +14,7 @@ export const useFileStore = defineStore("file", {
     isSilentRefresh: boolean;
     autoRefreshIntervalMs: number;
     refreshCycle: number;
+    refreshRequest: number;
   } => ({
     req: null,
     oldReq: null,
@@ -31,6 +32,9 @@ export const useFileStore = defineStore("file", {
     autoRefreshIntervalMs: 5000,
     // счётчик циклов: меняется в начале каждого отсчёта → через :key перезапускает анимацию кольца
     refreshCycle: 0,
+    // счётчик ручных запросов обновления (клик по кольцу в хедере): Files.vue следит
+    // за ним и обновляет список немедленно, заодно перезапуская отсчёт
+    refreshRequest: 0,
   }),
   getters: {
     selectedCount: (state) => state.selected.length,

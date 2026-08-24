@@ -286,12 +286,36 @@ html[dir="rtl"] #search .boxes h3 {
   initial-value: 0%;
 }
 
+/* кнопка-обёртка: клик = обновить список немедленно */
+.refresh-ring-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  align-self: center;
+  margin: 0 0.15em;
+  padding: 0.25em;
+  border: 0;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.refresh-ring-button:hover,
+.refresh-ring-button:focus-visible {
+  background-color: rgba(127, 127, 127, 0.2);
+}
+
+.refresh-ring-button:active .refresh-ring {
+  transform: scale(0.9);
+}
+
 .refresh-ring {
+  display: block;
   width: 1.15rem;
   height: 1.15rem;
   flex: 0 0 auto;
-  align-self: center;
-  margin: 0 0.4em;
   border-radius: 50%;
   /* обводка нарастает по часовой стрелке от 12 часов (дефолт conic-gradient) */
   background: conic-gradient(

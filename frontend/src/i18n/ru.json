@@ -49,6 +49,7 @@
     "todayDate": "Сегодняшняя дата",
     "renameToTime": "Переименовать в текущее время",
     "autoRefresh": "Время до авто-обновления списка",
+    "refreshNow": "Обновить сейчас",
     "discardChanges": "Отказаться",
     "stopSearch": "Stop searching",
     "saveChanges": "Сохранить",

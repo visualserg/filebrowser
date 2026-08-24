@@ -49,6 +49,7 @@
     "todayDate": "Today's date",
     "renameToTime": "Rename to current time",
     "autoRefresh": "Time until the list auto-refreshes",
+    "refreshNow": "Refresh now",
     "discardChanges": "Discard",
     "stopSearch": "Stop searching",
     "saveChanges": "Save changes",

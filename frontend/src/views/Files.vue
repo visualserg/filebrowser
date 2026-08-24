@@ -176,6 +176,12 @@ watch(route, () => {
 watch(reload, (newValue) => {
   newValue && fetchData();
 });
+// ручное обновление по кнопке-кольцу: тот же тихий путь, что и по таймеру,
+// плюс перезапуск отсчёта (scheduleAutoRefresh внутри runAutoRefresh)
+watch(
+  () => fileStore.refreshRequest,
+  () => runAutoRefresh()
+);
 
 // Define functions
 

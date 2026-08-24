@@ -12,14 +12,22 @@
 
       <!-- индикатор-«часы»: обводка идёт по кругу; замыкается (12 часов) = момент авто-обновления.
            длительность анимации = fileStore.autoRefreshIntervalMs (единый источник интервала);
-           :key=refreshCycle перезапускает анимацию синхронно с таймером в Files.vue -->
-      <div
-        class="refresh-ring"
-        :key="fileStore.refreshCycle"
-        :style="{ animationDuration: fileStore.autoRefreshIntervalMs + 'ms' }"
-        :title="t('buttons.autoRefresh')"
-        aria-hidden="true"
-      ></div>
+           :key=refreshCycle перезапускает анимацию синхронно с таймером в Files.vue.
+           Клик = форс-обновление сейчас (и отсчёт стартует заново) -->
+      <button
+        class="refresh-ring-button"
+        type="button"
+        :title="t('buttons.refreshNow')"
+        :aria-label="t('buttons.refreshNow')"
+        @click="forceRefresh"
+      >
+        <span
+          class="refresh-ring"
+          :key="fileStore.refreshCycle"
+          :style="{ animationDuration: fileStore.autoRefreshIntervalMs + 'ms' }"
+          aria-hidden="true"
+        ></span>
+      </button>
 
       <template #actions>
         <template v-if="!isMobile">
@@ -1200,6 +1208,11 @@ const revealPreviousItem = () => {
   });
 
   return true;
+};
+
+// форс-обновление списка по клику на кольцо: Files.vue слушает refreshRequest
+const forceRefresh = () => {
+  fileStore.refreshRequest++;
 };
 
 const showContextMenu = (event: MouseEvent) => {
