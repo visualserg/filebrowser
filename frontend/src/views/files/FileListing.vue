@@ -545,6 +545,18 @@ const isMobile = computed(() => {
 });
 
 watch(req, () => {
+  // Тихое авто-обновление: список тот же, пользователь мог быть проскроллен вниз.
+  // Сбрасывать showLimit нельзя (страница схлопнется до 50 элементов и браузер
+  // подрежет scrollY), скроллить к выделенному тоже нельзя.
+  if (fileStore.isSilentRefresh) {
+    nextTick(() => {
+      setItemWeight();
+      // добираем элементы, только если их не хватает на экран; showLimit не уменьшаем
+      fillWindow();
+    });
+    return;
+  }
+
   // Reset the show value
   showLimit.value = 50;
 

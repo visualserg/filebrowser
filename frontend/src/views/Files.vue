@@ -29,6 +29,7 @@ import {
   onBeforeUnmount,
   onMounted,
   onUnmounted,
+  nextTick,
   ref,
   watch,
 } from "vue";
@@ -121,7 +122,12 @@ const silentRefresh = async () => {
     const res = await api.fetch(url, silentController.signal);
     // отбрасываем ответ, если за время запроса ушли в другую папку
     if (currentUrl() === url) {
+      // флаг живёт ровно на время реакции на смену req: листинг по нему
+      // не сбрасывает showLimit и не скроллит к выделенному элементу
+      fileStore.isSilentRefresh = true;
       fileStore.updateRequest(res);
+      await nextTick();
+      fileStore.isSilentRefresh = false;
     }
   } catch {
     // тихо игнорируем — ошибки обработает обычный fetchData при навигации

@@ -11,6 +11,7 @@ export const useFileStore = defineStore("file", {
     isFiles: boolean;
     preselect: string | null;
     contextMenuOpen: boolean;
+    isSilentRefresh: boolean;
     autoRefreshIntervalMs: number;
     refreshCycle: number;
   } => ({
@@ -22,6 +23,9 @@ export const useFileStore = defineStore("file", {
     isFiles: false,
     preselect: null,
     contextMenuOpen: false,
+    // взведён на время тихого авто-обновления: подсказка листингу не трогать
+    // showLimit и скролл (иначе список схлопывается и страницу кидает наверх)
+    isSilentRefresh: false,
     // единственный источник интервала авто-обновления: питает и JS-таймер (Files.vue),
     // и длительность CSS-анимации кольца-«часов» (FileListing.vue, инлайн animation-duration)
     autoRefreshIntervalMs: 5000,
