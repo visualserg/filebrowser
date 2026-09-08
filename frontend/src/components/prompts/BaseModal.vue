@@ -1,5 +1,9 @@
 <template>
-  <div id="modal-background" @click="backgroundClick">
+  <div
+    id="modal-background"
+    @mousedown="backgroundMouseDown"
+    @mouseup="backgroundMouseUp"
+  >
     <div ref="modalContainer">
       <slot></slot>
     </div>
@@ -22,9 +26,21 @@ onMounted(() => {
   }
 });
 
-const backgroundClick = (event: Event) => {
-  const target = event.target as HTMLElement;
-  if (target.id == "modal-background") {
+// Закрываем только если и нажатие, и отпускание пришлись на фон: иначе
+// выделение текста мышкой, уехавшее за пределы формы, закрывало бы модалку.
+const pressedOnBackground = ref(false);
+
+const isBackground = (event: MouseEvent) =>
+  (event.target as HTMLElement).id === "modal-background";
+
+const backgroundMouseDown = (event: MouseEvent) => {
+  pressedOnBackground.value = isBackground(event);
+};
+
+const backgroundMouseUp = (event: MouseEvent) => {
+  const closing = pressedOnBackground.value && isBackground(event);
+  pressedOnBackground.value = false;
+  if (closing) {
     emit("closed");
   }
 };
