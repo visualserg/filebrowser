@@ -226,7 +226,11 @@ func rawFileHandler(w http.ResponseWriter, r *http.Request, file *files.FileInfo
 	setContentDisposition(w, r, file)
 	w.Header().Add("Content-Security-Policy", `script-src 'none';`)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Cache-Control", "private")
+	// no-cache lets the browser keep a copy but forces it to revalidate before
+	// reuse. Without it the response has no explicit freshness lifetime and
+	// browsers fall back to heuristic caching (RFC 9111 4.2.2), serving a stale
+	// file under an unchanged URL. ServeContent answers revalidations with 304.
+	w.Header().Set("Cache-Control", "private, no-cache")
 	http.ServeContent(w, r, file.Name, file.ModTime, fd)
 	return 0, nil
 }

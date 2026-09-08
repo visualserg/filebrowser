@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/filebrowser/filebrowser/v2/files"
 	"github.com/filebrowser/filebrowser/v2/settings"
@@ -140,5 +141,71 @@ func TestSetContentDisposition(t *testing.T) {
 				t.Errorf("Content-Type = %q, want application/octet-stream", contentType)
 			}
 		})
+	}
+}
+
+// A raw response must carry a revalidation directive. With a bare
+// "Cache-Control: private" the response has no explicit freshness lifetime, so
+// browsers apply heuristic caching (RFC 9111 4.2.2) and keep serving a stale
+// copy under an unchanged URL long after the file on disk changed.
+func TestRawFileRevalidates(t *testing.T) {
+	userScope := t.TempDir()
+	target := filepath.Join(userScope, "doc.txt")
+	if err := os.WriteFile(target, []byte("v1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Last-Modified has one-second granularity, so age the first version to keep
+	// the two revisions distinguishable to a conditional request.
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(target, old, old); err != nil {
+		t.Fatal(err)
+	}
+
+	key := []byte("test-signing-key")
+	perm := users.Permissions{Download: true}
+	st := scopedUserStorage(t, userScope, perm, key)
+	signed := signToken(t, perm, key)
+
+	get := func(ifModifiedSince string) *httptest.ResponseRecorder {
+		req, _ := http.NewRequest(http.MethodGet, "/doc.txt?inline=true", http.NoBody)
+		req.Header.Set("X-Auth", signed)
+		if ifModifiedSince != "" {
+			req.Header.Set("If-Modified-Since", ifModifiedSince)
+		}
+		rec := httptest.NewRecorder()
+		handle(rawHandler, "", st, &settings.Server{}).ServeHTTP(rec, req)
+		return rec
+	}
+
+	rec := get("")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%q", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "private, no-cache" {
+		t.Errorf("Cache-Control = %q, want %q", got, "private, no-cache")
+	}
+	lastModified := rec.Header().Get("Last-Modified")
+	if lastModified == "" {
+		t.Fatal("no Last-Modified header, revalidation would be impossible")
+	}
+
+	// Unchanged file: revalidation must be cheap, i.e. 304 without a body.
+	if rec := get(lastModified); rec.Code != http.StatusNotModified {
+		t.Errorf("expected 304 for unchanged file, got %d", rec.Code)
+	}
+
+	// Changed file: the same URL must yield the new bytes.
+	if err := os.WriteFile(target, []byte("v2-changed"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(target, time.Now(), time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	rec = get(lastModified)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 after modification, got %d", rec.Code)
+	}
+	if body := rec.Body.String(); body != "v2-changed" {
+		t.Errorf("stale body served for unchanged URL: %q", body)
 	}
 }
