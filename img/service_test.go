@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"image"
+	"image/color"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
@@ -443,4 +444,32 @@ func TestService_FormatFromExtension(t *testing.T) {
 			require.Equal(t, test.want, got)
 		})
 	}
+}
+
+func TestService_ResizeMemoryBudget(t *testing.T) {
+	// 200x150 gray png: 200*150*4*2 = 240000 bytes estimated
+	testCases := map[string]struct {
+		budget  int64
+		wantErr error
+	}{
+		"fits budget":    {budget: 240000},
+		"exceeds budget": {budget: 239999, wantErr: ErrImageTooLarge},
+		"no budget":      {budget: 0},
+	}
+	for name, test := range testCases {
+		t.Run(name, func(t *testing.T) {
+			svc := New(1, WithMemoryBudget(test.budget))
+			err := svc.Resize(context.Background(), newGrayPng(t, 200, 150), 100, 100, io.Discard)
+			if test.wantErr != nil {
+				require.ErrorIs(t, err, test.wantErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestDecodeCost(t *testing.T) {
+	require.Equal(t, int64(8040*3580*4*2), DecodeCost(image.Config{ColorModel: color.NRGBAModel, Width: 8040, Height: 3580}))
+	require.Equal(t, int64(100*100*8*2), DecodeCost(image.Config{ColorModel: color.NRGBA64Model, Width: 100, Height: 100}))
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/color"
 	"io"
 
 	"github.com/disintegration/imaging"
@@ -31,12 +32,34 @@ const (
 // Service
 type Service struct {
 	sem semaphore.Semaphore
+	// mem limits the total estimated size of images being decoded at once.
+	// Nil means no limit.
+	mem       semaphore.Semaphore
+	memBudget int64
 }
 
-func New(workers int) *Service {
-	return &Service{
+type ServiceOption func(*Service)
+
+// WithMemoryBudget limits the memory (in bytes) all concurrent decodes may
+// use together. A single image that does not fit into the budget is rejected
+// with ErrImageTooLarge. Zero or negative disables the limit.
+func WithMemoryBudget(bytes int64) ServiceOption {
+	return func(s *Service) {
+		if bytes > 0 {
+			s.memBudget = bytes
+			s.mem = semaphore.New(int(bytes))
+		}
+	}
+}
+
+func New(workers int, options ...ServiceOption) *Service {
+	s := &Service{
 		sem: semaphore.New(workers),
 	}
+	for _, option := range options {
+		option(s)
+	}
+	return s
 }
 
 // Format is an image file format.
@@ -150,7 +173,7 @@ func (s *Service) Resize(ctx context.Context, in io.Reader, width, height int, o
 	}
 	defer s.sem.Release(1)
 
-	format, wrappedReader, err := s.detectFormat(in)
+	format, imgConfig, wrappedReader, err := s.detectFormat(in)
 	if err != nil {
 		return err
 	}
@@ -175,6 +198,12 @@ func (s *Service) Resize(ctx context.Context, in io.Reader, width, height int, o
 		}
 	}
 
+	release, err := s.reserveMemory(ctx, imgConfig)
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	img, err := imaging.Decode(wrappedReader, imaging.AutoOrientation(true))
 	if err != nil {
 		return err
@@ -192,27 +221,58 @@ func (s *Service) Resize(ctx context.Context, in io.Reader, width, height int, o
 	return imaging.Encode(out, img, config.format.toImaging())
 }
 
-func (s *Service) detectFormat(in io.Reader) (Format, io.Reader, error) {
+func (s *Service) detectFormat(in io.Reader) (Format, image.Config, io.Reader, error) {
 	buf := &bytes.Buffer{}
 	r := io.TeeReader(in, buf)
 
 	imgConfig, imgFormat, err := image.DecodeConfig(r)
 	if err != nil {
-		return 0, nil, fmt.Errorf("%s: %w", err.Error(), ErrUnsupportedFormat)
+		return 0, imgConfig, nil, fmt.Errorf("%s: %w", err.Error(), ErrUnsupportedFormat)
 	}
 
 	// Check if image dimensions exceed maximum allowed size
 	if imgConfig.Width > MaxImageWidth || imgConfig.Height > MaxImageHeight {
-		return 0, nil, fmt.Errorf("image dimensions %dx%d exceed maximum %dx%d: %w",
+		return 0, imgConfig, nil, fmt.Errorf("image dimensions %dx%d exceed maximum %dx%d: %w",
 			imgConfig.Width, imgConfig.Height, MaxImageWidth, MaxImageHeight, ErrImageTooLarge)
 	}
 
 	format, err := ParseFormat(imgFormat)
 	if err != nil {
-		return 0, nil, ErrUnsupportedFormat
+		return 0, imgConfig, nil, ErrUnsupportedFormat
 	}
 
-	return format, io.MultiReader(buf, in), nil
+	return format, imgConfig, io.MultiReader(buf, in), nil
+}
+
+// reserveMemory blocks until the estimated decode cost of the image fits into
+// the memory budget. The returned func gives the reservation back.
+func (s *Service) reserveMemory(ctx context.Context, cfg image.Config) (func(), error) {
+	if s.mem == nil {
+		return func() {}, nil
+	}
+
+	cost := DecodeCost(cfg)
+	if cost > s.memBudget {
+		return nil, fmt.Errorf("image %dx%d needs ~%d MiB to decode, budget is %d MiB: %w",
+			cfg.Width, cfg.Height, cost>>20, s.memBudget>>20, ErrImageTooLarge)
+	}
+
+	if err := s.mem.Acquire(ctx, int(cost)); err != nil {
+		return nil, err
+	}
+	return func() { s.mem.Release(int(cost)) }, nil
+}
+
+// DecodeCost estimates how many bytes decoding and resizing the image takes.
+// The decoded bitmap is counted twice: auto-orientation and the crop in fill
+// mode each make a full-size NRGBA copy of it.
+func DecodeCost(cfg image.Config) int64 {
+	bytesPerPixel := int64(4)
+	switch cfg.ColorModel {
+	case color.RGBA64Model, color.NRGBA64Model, color.Gray16Model:
+		bytesPerPixel = 8
+	}
+	return int64(cfg.Width) * int64(cfg.Height) * bytesPerPixel * 2
 }
 
 func getEmbeddedThumbnail(in io.Reader) ([]byte, io.Reader, error) {

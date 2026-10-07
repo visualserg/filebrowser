@@ -46,6 +46,7 @@ var (
 		"disable-exec":                     "disableExec",
 		"disable-type-detection-by-header": "disableTypeDetectionByHeader",
 		"img-processors":                   "imageProcessors",
+		"img-memory-budget":                "imageMemoryBudget",
 		"cache-dir":                        "cacheDir",
 		"redis-cache-url":                  "redisCacheUrl",
 		"token-expiration-time":            "tokenExpirationTime",
@@ -92,6 +93,7 @@ func init() {
 	flags.String("cacheDir", "", "file cache directory (disabled if empty)")
 	flags.String("redisCacheUrl", "", "redis cache URL (for multi-instance deployments), e.g. redis://user:pass@host:port")
 	flags.Int("imageProcessors", 4, "image processors count")
+	flags.Int("imageMemoryBudget", 0, "memory in MiB all image previews may decode at once (0 = a quarter of the memory limit, -1 = unlimited)")
 	addServerFlags(flags)
 }
 
@@ -169,7 +171,7 @@ user created with the credentials from options "username" and "password".`,
 		if imgWorkersCount < 1 {
 			return errors.New("image resize workers count could not be < 1")
 		}
-		imageService := img.New(imgWorkersCount)
+		imageService := img.New(imgWorkersCount, img.WithMemoryBudget(imageMemoryBudget(v.GetInt("imageMemoryBudget"))))
 
 		var fileCache diskcache.Interface = diskcache.NewNoOp()
 		cacheDir := v.GetString("cacheDir")

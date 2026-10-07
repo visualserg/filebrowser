@@ -101,6 +101,11 @@ func handleImagePreview(
 	}
 	if !ok {
 		resizedImage, err = createPreview(imgSvc, fileCache, file, previewSize)
+		// The browser can still show an image the server can't afford to
+		// decode, so the big preview falls back to the original file.
+		if errors.Is(err, img.ErrImageTooLarge) && previewSize == PreviewSizeBig {
+			return rawFileHandler(w, r, file)
+		}
 		if err != nil {
 			return errToStatus(err), err
 		}
