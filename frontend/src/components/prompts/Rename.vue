@@ -5,12 +5,9 @@
     </div>
 
     <div class="card-content">
-      <p>
-        {{ $t("prompts.renameMessage") }} <code>{{ oldName }}</code
-        >:
-      </p>
       <input
         id="focus-prompt"
+        ref="input"
         class="input input--block"
         type="text"
         @keyup.enter="submit"
@@ -59,6 +56,17 @@ export default {
   created() {
     this.name = this.oldName;
   },
+  mounted() {
+    // BaseModal фокусирует поле уже после нашего mounted, поэтому ставим
+    // курсор на следующем тике: у файла перед расширением, иначе в конец.
+    this.$nextTick(() => {
+      const input = this.$refs.input;
+      const dot = this.isDir ? -1 : this.name.lastIndexOf(".");
+      const pos = dot > 0 ? dot : this.name.length;
+      input.focus();
+      input.setSelectionRange(pos, pos);
+    });
+  },
   inject: ["$showError"],
   computed: {
     ...mapState(useFileStore, [
@@ -79,6 +87,13 @@ export default {
       }
 
       return this.req.items[this.selected[0]].name;
+    },
+    isDir() {
+      if (!this.isListing) {
+        return this.req.isDir;
+      }
+
+      return this.req.items[this.selected[0]]?.isDir ?? false;
     },
   },
   methods: {
