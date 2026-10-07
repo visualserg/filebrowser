@@ -473,3 +473,10 @@ func TestDecodeCost(t *testing.T) {
 	require.Equal(t, int64(8040*3580*4*2), DecodeCost(image.Config{ColorModel: color.NRGBAModel, Width: 8040, Height: 3580}))
 	require.Equal(t, int64(100*100*8*2), DecodeCost(image.Config{ColorModel: color.NRGBA64Model, Width: 100, Height: 100}))
 }
+
+func TestService_ReserveMemoryEmptyImage(t *testing.T) {
+	svc := New(1, WithMemoryBudget(1<<20))
+	release, err := svc.reserveMemory(context.Background(), image.Config{ColorModel: color.NRGBAModel})
+	require.NoError(t, err)
+	release()
+}

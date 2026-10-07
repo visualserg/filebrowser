@@ -247,11 +247,12 @@ func (s *Service) detectFormat(in io.Reader) (Format, image.Config, io.Reader, e
 // reserveMemory blocks until the estimated decode cost of the image fits into
 // the memory budget. The returned func gives the reservation back.
 func (s *Service) reserveMemory(ctx context.Context, cfg image.Config) (func(), error) {
-	if s.mem == nil {
+	cost := DecodeCost(cfg)
+	// The semaphore panics on a zero weight, and an empty image costs nothing.
+	if s.mem == nil || cost <= 0 {
 		return func() {}, nil
 	}
 
-	cost := DecodeCost(cfg)
 	if cost > s.memBudget {
 		return nil, fmt.Errorf("image %dx%d needs ~%d MiB to decode, budget is %d MiB: %w",
 			cfg.Width, cfg.Height, cost>>20, s.memBudget>>20, ErrImageTooLarge)
